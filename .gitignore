@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+src-tauri/target/
+src-tauri/gen/
+*.tsbuildinfo
+
+# Logs, caches and OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vite/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Secrets and signing material: never commit these
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key
+*.cer
+*.snk
+
+# Internal / AI working files: never published
+.claude/
+.internal-docs/
+graphify-out/
+.graphifyignore
+CLAUDE.md
+handoff.md
+# Any other Markdown at the root is a working note: only the public files below are published
+/*.md
+!/README.md
+!/TERMS.md
+!/PRIVACY.md

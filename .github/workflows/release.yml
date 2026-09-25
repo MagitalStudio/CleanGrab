@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Builds the Windows installer when a version tag (v1.2.3) is pushed, and attaches it to a DRAFT
+# release. Nobody is offered the update until the draft is published by hand on GitHub: the app
+# only sees the latest published release, never a draft.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    permissions:
+      contents: write # create the draft release and upload the installer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      # No build cache here on purpose: what is shipped is always built from scratch.
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - run: npm ci
+
+      - name: Tag matches the app version
+        id: version
+        shell: bash
+        run: |
+          npm run version:check
+          version=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the app version ${version}. Run 'npm run version:set <x.y.z>' and tag v<x.y.z>."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Tests
+        shell: bash
+        run: |
+          npm run build
+          cd src-tauri && cargo test --release
+
+      # Always NSIS only: the updater expects this installer and nothing else.
+      - name: Build installer
+        run: npx tauri build --bundles nsis
+
+      - name: Checksum
+        id: installer
+        shell: bash
+        run: |
+          file="src-tauri/target/release/bundle/nsis/CleanGrab_${{ steps.version.outputs.version }}_x64-setup.exe"
+          if [ ! -f "$file" ]; then
+            echo "::error::Installer not found: $file"
+            exit 1
+          fi
+          sha=$(sha256sum "$file" | cut -d' ' -f1)
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "### CleanGrab ${{ steps.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$(basename "$file")\` SHA-256: \`$sha\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "${{ steps.installer.outputs.file }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft \
+            --verify-tag \
+            --title "CleanGrab ${{ steps.version.outputs.version }}" \
+            --generate-notes

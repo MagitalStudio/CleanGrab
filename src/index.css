@@ -1,0 +1,355 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens, sampled from the reference design. Channels are
+ * space-separated RGB so Tailwind can apply opacity (bg-line/10). The palette
+ * follows the system unless the person picks Light or Dark in Settings, which
+ * sets data-theme on <html> (see services/appearance.ts).
+ *
+ * Contrast (light): ink 16.8 on cards, ink-2 6.0, ink-3 5.1, accent text 5.6,
+ * danger 5.4, white label on the blue fill 4.7. Dark: ink-2 5.4+, accent text 5.3+.
+ */
+:root {
+  color-scheme: light dark;
+
+  --bg: 245 245 247; /* #F5F5F7 page */
+  --surface: 255 255 255; /* cards */
+  --field: 250 250 252; /* inputs */
+  --elevated: 240 240 242; /* secondary buttons */
+  --track: 233 233 235; /* segmented control, progress track */
+  --pill: 255 255 255; /* selected segment */
+  --line: 29 29 31;
+  --ink: 29 29 31; /* #1D1D1F */
+  --ink-2: 99 99 102; /* #636366 */
+  --ink-3: 110 110 115; /* #6E6E73 */
+  --accent: 0 102 204; /* #0066CC: blue for text and icons */
+  --accent-fill: 0 113 227; /* #0071E3: blue for buttons and bars */
+  --on-accent: 255 255 255;
+  --danger: 215 0 21;
+  --on-danger: 255 255 255;
+  --control-off: 142 142 147;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 28px -16px rgb(0 0 0 / 0.12);
+
+  /* How long colours take to fade when the palette changes, and how long the
+     circle that reveals the new palette takes (see services/themeTransition.ts). */
+  --fade: 380ms;
+  --theme-ms: 650ms;
+}
+
+/* Dark palette: applied by the system setting, or forced with data-theme="dark". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: 28 28 30;
+    --surface: 44 44 46;
+    --field: 28 28 30;
+    --elevated: 58 58 60;
+    --track: 28 28 30;
+    --pill: 72 72 74;
+    --line: 255 255 255;
+    --ink: 245 245 247;
+    --ink-2: 174 174 178;
+    --ink-3: 152 152 157;
+    --accent: 94 174 255;
+    --accent-fill: 0 113 227;
+    --on-accent: 255 255 255;
+    --danger: 255 122 114;
+    --on-danger: 29 29 31;
+    --control-off: 142 142 147;
+    --card-shadow: none;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: 28 28 30;
+  --surface: 44 44 46;
+  --field: 28 28 30;
+  --elevated: 58 58 60;
+  --track: 28 28 30;
+  --pill: 72 72 74;
+  --line: 255 255 255;
+  --ink: 245 245 247;
+  --ink-2: 174 174 178;
+  --ink-3: 152 152 157;
+  --accent: 94 174 255;
+  --accent-fill: 0 113 227;
+  --on-accent: 255 255 255;
+  --danger: 255 122 114;
+  --on-danger: 29 29 31;
+  --control-off: 142 142 147;
+  --card-shadow: none;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  @apply font-sans text-body text-ink antialiased;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The main window paints its own opaque background; the toast stays transparent. */
+.window-main body,
+.window-main #root {
+  background: rgb(var(--bg));
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgb(var(--accent-fill) / 0.25);
+}
+
+/*
+ * Colours fade when the palette changes, whatever caused it: a click on the
+ * theme button in another window, or the system switching to dark at sunset.
+ * This sits below every component's own transition, so hovers keep their speed.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    transition:
+      background-color var(--fade) ease,
+      color var(--fade) ease,
+      border-color var(--fade) ease,
+      fill var(--fade) ease,
+      stroke var(--fade) ease,
+      box-shadow var(--fade) ease;
+  }
+}
+
+@layer components {
+  /* 32px tall, 8px radius: the reference's secondary buttons. */
+  .btn {
+    @apply inline-flex h-8 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-body font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-fill/60 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply bg-accent-fill text-accent-on hover:brightness-110;
+  }
+  .btn-secondary {
+    @apply bg-elevated text-ink hover:bg-line/10;
+  }
+  /* The red button, for a step that is hard to take back. */
+  .btn-danger {
+    @apply bg-danger hover:brightness-110 focus-visible:ring-danger/60;
+    color: rgb(var(--on-danger));
+  }
+  .btn-ghost {
+    @apply text-ink-2 hover:bg-line/10 hover:text-ink;
+  }
+  .btn-icon {
+    @apply inline-flex h-7 w-7 select-none items-center justify-center rounded-md text-ink-2 transition duration-150 hover:bg-line/10 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-fill/60;
+  }
+  /* The big full-width action under the cards. */
+  .btn-cta {
+    @apply flex h-11 w-full select-none items-center justify-center gap-2 rounded-lg bg-accent-fill text-headline font-bold text-accent-on shadow-[0_8px_22px_-10px_rgb(var(--accent-fill)/0.75)] transition duration-200 hover:-translate-y-px hover:shadow-[0_12px_26px_-10px_rgb(var(--accent-fill)/0.85)] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-fill/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:translate-y-0 active:scale-[0.995] disabled:pointer-events-none disabled:opacity-40 disabled:shadow-none;
+  }
+  .card {
+    @apply rounded-xl border border-line/10 bg-surface;
+    box-shadow: var(--card-shadow);
+  }
+  /* Small uppercase caption above a control: LINKS, FORMAT, SAVE TO. */
+  .label {
+    @apply text-caption font-bold uppercase tracking-wider text-ink-2;
+  }
+  .field {
+    @apply w-full rounded-md border border-line/15 bg-field px-3 text-body text-ink placeholder:text-ink-3 transition-[border-color,box-shadow] duration-150 focus:border-accent-fill/70 focus:outline-none focus:ring-2 focus:ring-accent-fill/20;
+  }
+}
+
+@layer utilities {
+  /* Links use the font Chrome uses in its address bar (the system UI font), so a
+     pasted URL looks the way people are used to seeing it. */
+  .font-url {
+    font-family: "Segoe UI", system-ui, -apple-system, "SF Pro Text", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+/*
+ * Light/dark switch as a circle that grows from the click. The browser keeps a
+ * picture of the old palette and of the new one; script animates the new one's
+ * clip-path. Nothing may fade during it, or the new picture would be half old.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/*
+ * The edge of the circle is soft: the new palette fades in over a wide band
+ * instead of starting on a hard line, following a Gaussian curve (the alphas
+ * are its values), so the two palettes melt into one another. --theme-r is the
+ * radius reached so far; script animates it. --theme-x/-y/-soft are set by script.
+ */
+@property --theme-r {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+::view-transition-new(root) {
+  --theme-mask: radial-gradient(
+    circle at var(--theme-x, 50%) var(--theme-y, 50%),
+    #000 calc(var(--theme-r) - var(--theme-soft, 240px)),
+    rgb(0 0 0 / 0.974) calc(var(--theme-r) - var(--theme-soft, 240px) * 0.85),
+    rgb(0 0 0 / 0.866) calc(var(--theme-r) - var(--theme-soft, 240px) * 0.7),
+    rgb(0 0 0 / 0.5) calc(var(--theme-r) - var(--theme-soft, 240px) * 0.5),
+    rgb(0 0 0 / 0.134) calc(var(--theme-r) - var(--theme-soft, 240px) * 0.3),
+    rgb(0 0 0 / 0.026) calc(var(--theme-r) - var(--theme-soft, 240px) * 0.15),
+    transparent var(--theme-r)
+  );
+  -webkit-mask-image: var(--theme-mask);
+  mask-image: var(--theme-mask);
+}
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
+/*
+ * The player's sliders (seek and volume). --fill, set by the component, is how
+ * much is filled. The round handle appears when the slider is pointed at.
+ */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 0%;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, rgb(var(--accent-fill)) var(--fill), rgb(var(--line) / 0.18) var(--fill));
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  transform: scale(0);
+  transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.slider:hover::-webkit-slider-thumb,
+.slider:focus-visible::-webkit-slider-thumb,
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1);
+}
+.slider:focus-visible {
+  outline: 2px solid rgb(var(--accent-fill) / 0.6);
+  outline-offset: 3px;
+  border-radius: 9999px;
+}
+
+/* Full-screen video is always on black: its controls use the dark palette in either theme. */
+.player-dark {
+  --bg: 0 0 0;
+  --surface: 28 28 30;
+  --line: 255 255 255;
+  --ink: 245 245 247;
+  --ink-2: 174 174 178;
+  --ink-3: 152 152 157;
+  --accent: 94 174 255;
+  color: rgb(var(--ink));
+}
+
+/* A soft light sweeping across a progress bar, so a download looks alive. */
+.bar-shine {
+  position: relative;
+  overflow: hidden;
+}
+.bar-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.4), transparent);
+  transform: translateX(-100%);
+  animation: shine 1.8s ease-in-out infinite;
+}
+@keyframes shine {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Toast auto-dismiss countdown. */
+@keyframes drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line) / 0.3) transparent;
+}
+
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--line) / 0.3);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .frosted {
+    backdrop-filter: none !important;
+    background-color: rgb(var(--surface)) !important;
+  }
+}
+
+/* Scripts whose letters join or carry marks must never be letter-spaced. */
+:lang(ar) *,
+:lang(ur) *,
+:lang(hi) *,
+:lang(bn) * {
+  letter-spacing: normal !important;
+}
